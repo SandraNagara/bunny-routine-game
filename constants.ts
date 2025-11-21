@@ -11,21 +11,22 @@ export const COLORS = {
 
 export const GAME_CONFIG = {
   // Timers (seconds)
-  DURATION_TRAIN: 8,
-  DURATION_SLEEP: 15,
+  DURATION_TRAIN: 10,
+  DURATION_SLEEP: 15, // Nap duration
+  DURATION_LONG_SLEEP: 21600, // 6 hours in seconds (simulated or real) - used for game logic
   DURATION_CLEAN: 3,
   DURATION_FEED: 2,
+  DURATION_DRINK: 2,
+  DURATION_SOCIAL: 10,
   
-  // Work Session Configuration (Accelerated: 1 minute real = 1 hour game)
-  // Total 6 hours game time = 360 seconds real time
+  // Work Session Configuration
   WORK_SESSION_DURATION: 360, 
-  // Pomodoro every 1 hour game time = 60 seconds real time
   POMODORO_INTERVAL: 60,
-  // Break duration 15 mins game time = 15 seconds real time
   POMODORO_DURATION: 15,
   
   // Decay Rates (per 60 seconds)
   DECAY_HUNGER: 5,
+  DECAY_THIRST: 6,
   DECAY_CLEANLINESS: 3,
   DECAY_LOVE: 2,
   
@@ -33,31 +34,42 @@ export const GAME_CONFIG = {
   GAIN_FEED_HUNGER: 25,
   GAIN_FEED_LOVE: 5,
   
+  GAIN_DRINK_THIRST: 30,
+  GAIN_DRINK_LOVE: 2,
+  
   GAIN_CLEAN: 35,
   
-  GAIN_WORK_XP_PER_SEC: 0.5, // XP gained per second of working
+  GAIN_WORK_XP_PER_SEC: 0.5, 
   COST_WORK_HUNGER: 10,
+  COST_WORK_THIRST: 10,
   COST_WORK_CLEAN: 5,
   
   GAIN_TRAIN_XP: 12,
   GAIN_TRAIN_LOVE: 4,
   COST_TRAIN_HUNGER: 6,
+  COST_TRAIN_THIRST: 15,
+  WEIGHT_LOSS_TRAIN: 5,
+  WEIGHT_GAIN_SKIP: 5,
   
   GAIN_SLEEP_HEALTH: 10,
   GAIN_SLEEP_LOVE: 3,
   COST_SLEEP_HUNGER: 5,
   COST_SLEEP_CLEAN: 5,
   
+  GAIN_SOCIAL_LOVE: 25, 
+  COST_SOCIAL_HUNGER: 5,
+  
   // Health Logic
-  DAMAGE_STARVING_DIRTY: 10, // Damage if conditions bad
-  REGEN_HEALTH: 5,           // Heal if conditions good
+  DAMAGE_STARVING_DIRTY: 10, 
+  REGEN_HEALTH: 5,           
   
   // Thresholds
   THRESHOLD_HUNGRY: 20,
+  THRESHOLD_THIRSTY: 20,
   THRESHOLD_DIRTY: 20,
   THRESHOLD_LONELY: 20,
   THRESHOLD_FULL: 95,
-  THRESHOLD_HAPPY_HEALTH: 50, // Hunger & Clean must be > 50 to heal
+  THRESHOLD_HAPPY_HEALTH: 50, 
 };
 
 export const VOXEL_SIZE = 1;

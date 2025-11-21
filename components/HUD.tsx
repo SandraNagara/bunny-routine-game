@@ -1,86 +1,80 @@
+
 import React from 'react';
-import { Heart, Zap, Smile, Sparkles, Briefcase } from 'lucide-react';
+import { Heart, Zap, Smile, Sparkles, Droplets, Scale, Cloud, Sun, CloudRain, CloudSnow } from 'lucide-react';
+import { Weather, Season } from '../types';
 
 interface HUDProps {
   time: Date;
   health: number;
   hunger: number;
+  thirst: number;
   cleanliness: number;
   love: number;
-  xpWork: number;
-  xpTrain: number;
-  levelWork: number;
-  levelTrain: number;
+  weight: number;
+  season: Season;
+  weather: Weather;
   currentMessage: string | null;
 }
 
-const ProgressBar = ({ value, color, icon: Icon }: { value: number, color: string, icon: any }) => (
-    <div className="flex items-center gap-2 bg-white/80 p-1 pr-2 rounded-full backdrop-blur-sm shadow-sm mb-1">
-        <div className={`p-1.5 rounded-full text-white`} style={{ backgroundColor: color }}>
-            <Icon size={14} />
+const StatBar = ({ value, color, icon: Icon }: { value: number, color: string, icon: any }) => (
+    <div className="flex items-center gap-2 bg-white/20 p-1 pr-2 rounded-full backdrop-blur-md shadow-sm mb-2 w-48">
+        <div className={`p-1.5 rounded-full text-white shadow-sm`} style={{ backgroundColor: color }}>
+            <Icon size={16} fill="currentColor" />
         </div>
-        <div className="flex-1 h-3 w-24 bg-gray-200 rounded-full overflow-hidden">
+        <div className="flex-1 h-3 bg-black/10 rounded-full overflow-hidden">
             <div 
-                className="h-full transition-all duration-500" 
+                className="h-full transition-all duration-500 shadow-[0_0_10px_rgba(0,0,0,0.1)]" 
                 style={{ width: `${value}%`, backgroundColor: color }}
             />
         </div>
     </div>
 );
 
-const HUD: React.FC<HUDProps> = ({ time, health, hunger, cleanliness, love, xpWork, xpTrain, levelWork, levelTrain, currentMessage }) => {
+const HUD: React.FC<HUDProps> = ({ time, health, hunger, thirst, cleanliness, love, weight, season, weather, currentMessage }) => {
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
   return (
     <>
-      {/* TOP BAR */}
-      <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-30 pointer-events-none">
-        {/* Left: Time & Message */}
-        <div className="flex flex-col gap-4 items-start pointer-events-auto">
-          <div className="bg-white/90 backdrop-blur-md rounded-full px-6 py-3 shadow-xl border-2 border-pink-100">
-             <span className="text-3xl font-black text-gray-700 title-font tracking-wider">
+      {/* TOP LEFT: CLOCK */}
+      <div className="absolute top-6 left-6 z-30 pointer-events-none">
+          <div className="bg-white/90 backdrop-blur-xl rounded-full px-8 py-3 shadow-2xl border-2 border-white/50 inline-block">
+             <span className="text-4xl font-black text-gray-800 title-font tracking-widest drop-shadow-sm">
                {formatTime(time)}
              </span>
           </div>
           
           {/* Dialogue Bubble */}
           {currentMessage && (
-              <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-lg max-w-xs animate-bounce-slight border-2 border-gray-100">
+              <div className="mt-4 bg-white p-4 rounded-2xl rounded-tl-none shadow-xl max-w-xs animate-bounce-slight border-2 border-gray-100 pointer-events-auto">
                   <p className="text-gray-600 font-bold text-sm handwritten">{currentMessage}</p>
               </div>
           )}
-        </div>
-
-        {/* Right: Stats */}
-        <div className="flex flex-col items-end gap-1 pointer-events-auto">
-          <ProgressBar value={health} color="#EF4444" icon={Heart} />
-          <ProgressBar value={hunger} color="#F97316" icon={Zap} />
-          <ProgressBar value={cleanliness} color="#3B82F6" icon={Sparkles} />
-          <ProgressBar value={love} color="#EC4899" icon={Smile} />
-        </div>
       </div>
 
-      {/* XP BARS (Bottom Left) */}
-      <div className="absolute bottom-4 left-4 z-30 pointer-events-auto flex flex-col gap-2">
-          <div className="bg-white/90 p-3 rounded-xl shadow-lg backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-1 text-xs font-bold text-gray-500 uppercase">
-                  <Briefcase size={12} /> Work Level <span className="text-indigo-600 ml-auto">{levelWork}</span>
-              </div>
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${xpWork}%` }}></div>
-              </div>
-          </div>
-          
-          <div className="bg-white/90 p-3 rounded-xl shadow-lg backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-1 text-xs font-bold text-gray-500 uppercase">
-                  <Zap size={12} /> Sport Level <span className="text-emerald-600 ml-auto">{levelTrain}</span>
-              </div>
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${xpTrain}%` }}></div>
-              </div>
-          </div>
+      {/* TOP RIGHT: STATS & WEATHER */}
+      <div className="absolute top-6 right-6 z-30 flex flex-col items-end pointer-events-none">
+        
+        {/* Weather & Weight Pill */}
+        <div className="flex items-center gap-2 mb-3 pointer-events-auto">
+            <div className="bg-indigo-900/80 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-2 backdrop-blur-md shadow-lg border border-white/10">
+                <span>{season} • {weather}</span>
+            </div>
+            <div className="bg-white/90 text-gray-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                 <Scale size={12} />
+                 <span>{Math.round(weight)}kg</span>
+            </div>
+        </div>
+
+        {/* Vertical Stats Stack */}
+        <div className="pointer-events-auto">
+          <StatBar value={health} color="#EF4444" icon={Heart} />
+          <StatBar value={hunger} color="#F97316" icon={Zap} />
+          <StatBar value={thirst} color="#0EA5E9" icon={Droplets} />
+          <StatBar value={cleanliness} color="#8B5CF6" icon={Sparkles} />
+          <StatBar value={love} color="#EC4899" icon={Smile} />
+        </div>
       </div>
     </>
   );

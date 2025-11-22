@@ -11,8 +11,12 @@ export enum RabbitState {
   SLEEPING = 'SLEEPING',
   WAKING = 'WAKING', 
   DEAD = 'DEAD',
-  CLEANING = 'CLEANING',
+  CLEANING = 'CLEANING', // Generic cleanup (kept for backward compat)
+  BRUSHING = 'BRUSHING',
+  WASHING_FACE = 'WASHING_FACE',
+  SHOWERING = 'SHOWERING',
   SOCIAL = 'SOCIAL', 
+  DANCING = 'DANCING', // New
   BREAK = 'BREAK' 
 }
 
@@ -21,21 +25,24 @@ export enum Outfit {
   WORK = 'WORK',
   PAJAMA = 'PAJAMA',
   SPORT_SWIM = 'SPORT_SWIM',
-  SPORT_BIKE = 'SPORT_BIKE', // Kept for backward compatibility or generic sport
+  SPORT_BIKE = 'SPORT_BIKE', 
   SPORT_RUN = 'SPORT_RUN',
   SPORT_GYM = 'SPORT_GYM',
-  SPORT_PILATES = 'SPORT_PILATES'
+  SPORT_PILATES = 'SPORT_PILATES',
+  PARTY = 'PARTY' // New
 }
 
 export enum SceneType {
   LIVING_ROOM = 'LIVING_ROOM',
   OFFICE = 'OFFICE',
   BEDROOM = 'BEDROOM',
+  BATHROOM = 'BATHROOM',
   // Social Scenes
   RESTAURANT = 'RESTAURANT',
   CINEMA = 'CINEMA',
   PICNIC = 'PICNIC',
   TV_ROOM = 'TV_ROOM',
+  NIGHTCLUB = 'NIGHTCLUB', // New
   // Sport Scenes
   GYM = 'GYM',
   POOL = 'POOL',
@@ -72,6 +79,12 @@ export interface WorkSession {
   breakTimer: number; 
 }
 
+export interface DailyHygiene {
+  brushed: boolean;
+  washedFace: boolean;
+  showered: boolean;
+}
+
 export interface GameState {
   // Core Stats (0-100)
   health: number;
@@ -79,7 +92,7 @@ export interface GameState {
   thirst: number;
   cleanliness: number;
   love: number; 
-  weight: number; // 0-100 (Normal around 50)
+  weight: number; 
   
   // XP Stats
   xpWork: number; 
@@ -95,7 +108,7 @@ export interface GameState {
   season: Season;
   weather: Weather;
   isManualWeather: boolean; 
-  lampOn: boolean; // For night visibility
+  lampOn: boolean; 
   
   // Action System
   isBusy: boolean;
@@ -110,7 +123,10 @@ export interface GameState {
   dinnerEaten: boolean;
   mealPrompt: 'LUNCH' | 'DINNER' | null;
   lastDayPlayed: string; 
-  lastSportDate: string; // To track daily sport
+  lastSportDate: string; 
+
+  // Hygiene System
+  dailyHygiene: DailyHygiene;
 
   // Task System
   tasks: Task[];
@@ -129,7 +145,7 @@ export const INITIAL_STATE: GameState = {
   thirst: 80,
   cleanliness: 80,
   love: 80,
-  weight: 50, // Ideal weight
+  weight: 50, 
   
   xpWork: 0,
   levelWork: 1,
@@ -163,6 +179,12 @@ export const INITIAL_STATE: GameState = {
   lastDayPlayed: new Date().toISOString(),
   lastSportDate: '',
   
+  dailyHygiene: {
+    brushed: false,
+    washedFace: false,
+    showered: false
+  },
+
   tasks: [
     { id: '1', text: 'Check emails', completed: false },
     { id: '2', text: 'Plan the day', completed: false }

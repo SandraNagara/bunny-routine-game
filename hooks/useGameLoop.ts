@@ -4,7 +4,7 @@ import { GameState, INITIAL_STATE, RabbitState, Outfit, SceneType, Season, Weath
 import { GAME_CONFIG } from '../constants';
 
 // --- AUDIO SYSTEM (Synth) ---
-const playSFX = (type: 'success' | 'alert' | 'start' | 'click' | 'eat' | 'drink') => {
+const playSFX = (type: 'success' | 'alert' | 'start' | 'click' | 'eat' | 'drink' | 'water' | 'party') => {
     try {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
@@ -77,6 +77,35 @@ const playSFX = (type: 'success' | 'alert' | 'start' | 'click' | 'eat' | 'drink'
                 osc.start(now);
                 osc.stop(now + 0.2);
                 break;
+            case 'water':
+                const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < ctx.sampleRate * 0.5; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                const noise = ctx.createBufferSource();
+                noise.buffer = noiseBuffer;
+                const noiseFilter = ctx.createBiquadFilter();
+                noiseFilter.type = 'lowpass';
+                noiseFilter.frequency.value = 800;
+                noise.connect(noiseFilter);
+                noiseFilter.connect(gain);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                noise.start(now);
+                break;
+            case 'party':
+                osc.type = 'sawtooth';
+                // Simple bass kick pattern
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                osc.frequency.setValueAtTime(100, now + 0.25);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.35);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+                break;
         }
     } catch (e) {
     }
@@ -107,13 +136,14 @@ const getRandomWeather = (season: Season): Weather => {
 export const useGameLoop = () => {
   const [gameState, setGameState] = useState<GameState>(() => {
     try {
-      const saved = localStorage.getItem('bunnyLifeState_v7'); 
+      const saved = localStorage.getItem('bunnyLifeState_v8'); 
       if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed.thirst === undefined) parsed.thirst = 80;
           if (parsed.weight === undefined) parsed.weight = 50;
           if (parsed.lampOn === undefined) parsed.lampOn = false;
           if (!parsed.lastSportDate) parsed.lastSportDate = '';
+          if (!parsed.dailyHygiene) parsed.dailyHygiene = { brushed: false, washedFace: false, showered: false };
           return parsed;
       }
       return INITIAL_STATE;
@@ -124,10 +154,9 @@ export const useGameLoop = () => {
 
   const [time, setTime] = useState(new Date());
   const tickCounter = useRef(0); 
-  const sleepAlertShown = useRef(false);
 
   useEffect(() => {
-    localStorage.setItem('bunnyLifeState_v7', JSON.stringify(gameState));
+    localStorage.setItem('bunnyLifeState_v8', JSON.stringify(gameState));
   }, [gameState]);
 
   // --- MAIN LOOP (1s Tick) ---
@@ -152,11 +181,20 @@ export const useGameLoop = () => {
             }
         }
 
-        // --- DAILY RESET & SPORT CHECK ---
+        // --- DAILY RESET & SPORT/HYGIENE CHECK ---
         const lastDate = new Date(prev.lastDayPlayed);
         if (now.getDate() !== lastDate.getDate()) {
             newState.lunchEaten = false;
             newState.dinnerEaten = false;
+            
+            // Hygiene Reset
+            const hygieneScore = (prev.dailyHygiene.brushed ? 1 : 0) + (prev.dailyHygiene.washedFace ? 1 : 0) + (prev.dailyHygiene.showered ? 1 : 0);
+            if (hygieneScore < 3) {
+                newState.cleanliness = Math.max(0, newState.cleanliness - 40);
+                message = "I felt sticky waking up... 🪰";
+            }
+            newState.dailyHygiene = { brushed: false, washedFace: false, showered: false };
+            
             newState.lastDayPlayed = now.toISOString();
             newState.daysSurvived += 1;
             
@@ -164,11 +202,11 @@ export const useGameLoop = () => {
             const lastSport = new Date(prev.lastSportDate);
             if (lastSport.getDate() !== lastDate.getDate()) {
                 newState.weight = Math.min(100, newState.weight + GAME_CONFIG.WEIGHT_GAIN_SKIP);
-                message = "I didn't exercise yesterday... gained weight ⚖️";
+                if (message === prev.currentMessage) message = "I didn't exercise yesterday... gained weight ⚖️";
             }
             
             if (!prev.isManualWeather) newState.weather = getRandomWeather(newState.season);
-            message = "Good morning! New day! ☀️";
+            if (message === prev.currentMessage) message = "Good morning! New day! ☀️";
         }
 
         // --- SLEEP ALERT (22:00) ---
@@ -207,7 +245,6 @@ export const useGameLoop = () => {
         if (newState.workSession.isActive) {
             if (newState.workSession.isPomodoro) {
                 newState.workSession.breakTimer -= 1;
-                // Ensure we stay in EATING state during Pomodoro
                 if (newState.rabbitState !== RabbitState.EATING) {
                    newState.rabbitState = RabbitState.EATING;
                 }
@@ -234,7 +271,6 @@ export const useGameLoop = () => {
                     playSFX('alert');
                     newState.workSession.isPomodoro = true;
                     newState.workSession.breakTimer = GAME_CONFIG.POMODORO_DURATION;
-                    // Keep in Office, keep Work outfit (or maybe relaxed), but EATING state
                     newState.rabbitState = RabbitState.EATING;
                     message = "Pomodoro Time! 🍪";
                 }
@@ -296,6 +332,15 @@ export const useGameLoop = () => {
                         newState.lastSportDate = new Date().toISOString();
                         newState.weight = Math.max(0, newState.weight - GAME_CONFIG.WEIGHT_LOSS_TRAIN);
                     }
+                    
+                    // Party Finish
+                    if (newState.activeAction === 'PARTY') {
+                        newState.hunger = Math.max(0, newState.hunger - GAME_CONFIG.COST_PARTY_HUNGER);
+                        newState.thirst = Math.max(0, newState.thirst - GAME_CONFIG.COST_PARTY_THIRST);
+                        newState.health = Math.max(0, newState.health - GAME_CONFIG.COST_PARTY_HEALTH);
+                        newState.love = Math.min(100, newState.love + GAME_CONFIG.GAIN_PARTY_LOVE);
+                    }
+                    
                     newState.activeAction = null;
                 }
             }
@@ -308,7 +353,11 @@ export const useGameLoop = () => {
             if (!newState.workSession.isActive || newState.workSession.isPomodoro) {
                 newState.hunger = Math.max(0, newState.hunger - GAME_CONFIG.DECAY_HUNGER);
                 newState.thirst = Math.max(0, newState.thirst - GAME_CONFIG.DECAY_THIRST);
-                newState.cleanliness = Math.max(0, newState.cleanliness - GAME_CONFIG.DECAY_CLEANLINESS);
+                
+                // Hygiene decay logic: If daily tasks not done, decay faster
+                const hygieneFactor = (newState.dailyHygiene.brushed ? 0 : 1) + (newState.dailyHygiene.washedFace ? 0 : 1) + (newState.dailyHygiene.showered ? 0 : 1);
+                newState.cleanliness = Math.max(0, newState.cleanliness - (GAME_CONFIG.DECAY_CLEANLINESS + hygieneFactor));
+
                 newState.love = Math.max(0, newState.love - GAME_CONFIG.DECAY_LOVE);
                 
                 if (newState.currentScene === SceneType.LIVING_ROOM && 
@@ -321,9 +370,8 @@ export const useGameLoop = () => {
                  newState.health = Math.max(0, newState.health - 5);
                  message = "I feel sick... 🤢";
             }
-            if (newState.thirst < 20) {
-                newState.health = Math.max(0, newState.health - 5);
-                message = "Thirsty... 💧";
+            if (newState.cleanliness < 20) {
+                message = "I feel gross... 🪰";
             }
         }
 
@@ -382,44 +430,101 @@ export const useGameLoop = () => {
     });
   }, []);
 
-  const clean = useCallback(() => {
-    playSFX('click');
+  const performHygiene = useCallback((type: 'TEETH' | 'FACE' | 'SHOWER') => {
+    playSFX('water');
     setGameState(prev => {
         if (prev.isBusy) return prev;
+
+        let actionType = '';
+        let state = RabbitState.IDLE;
+        let duration = 5;
+        let msg = '';
+        let hygieneUpdate = { ...prev.dailyHygiene };
+        let cleanGain = 0;
+
+        switch(type) {
+            case 'TEETH':
+                actionType = 'BRUSH_TEETH';
+                state = RabbitState.BRUSHING;
+                duration = GAME_CONFIG.DURATION_BRUSH;
+                msg = "Brushing teeth! 🪥";
+                hygieneUpdate.brushed = true;
+                cleanGain = 33;
+                break;
+            case 'FACE':
+                actionType = 'WASH_FACE';
+                state = RabbitState.WASHING_FACE;
+                duration = GAME_CONFIG.DURATION_WASH_FACE;
+                msg = "Washing face! 🫧";
+                hygieneUpdate.washedFace = true;
+                cleanGain = 33;
+                break;
+            case 'SHOWER':
+                actionType = 'SHOWER';
+                state = RabbitState.SHOWERING;
+                duration = GAME_CONFIG.DURATION_SHOWER;
+                msg = "Taking a shower! 🚿";
+                hygieneUpdate.showered = true;
+                cleanGain = 34;
+                break;
+        }
+
         return {
             ...prev,
             isBusy: true,
-            activeAction: 'CLEAN',
-            actionTimer: GAME_CONFIG.DURATION_CLEAN,
-            rabbitState: RabbitState.CLEANING,
-            cleanliness: Math.min(100, prev.cleanliness + GAME_CONFIG.GAIN_CLEAN),
-            currentMessage: "Scrub scrub! 🧼"
+            activeAction: actionType,
+            actionTimer: duration,
+            rabbitState: state,
+            currentScene: SceneType.BATHROOM,
+            cleanliness: Math.min(100, prev.cleanliness + cleanGain),
+            dailyHygiene: hygieneUpdate,
+            currentMessage: msg
         };
     });
   }, []);
 
-  const social = useCallback((activity: 'RESTAURANT' | 'CINEMA' | 'TV' | 'PICNIC') => {
-    playSFX('click');
+  const clean = useCallback(() => {
+      performHygiene('FACE');
+  }, [performHygiene]);
+
+  const social = useCallback((activity: 'RESTAURANT' | 'CINEMA' | 'TV' | 'PICNIC' | 'PARTY') => {
+    
     setGameState(prev => {
         if (prev.isBusy) return prev;
         
         let targetScene = SceneType.LIVING_ROOM;
         let msg = "Hanging out!";
+        let duration = GAME_CONFIG.DURATION_SOCIAL;
+        let rabbitState = RabbitState.SOCIAL;
+        let outfit = prev.outfit;
+        let action = 'SOCIAL';
+
+        if (activity === 'RESTAURANT') { targetScene = SceneType.RESTAURANT; msg = "Dinner with Kitty! 🐱"; playSFX('click'); }
+        if (activity === 'CINEMA') { targetScene = SceneType.CINEMA; msg = "Watching a movie! 🍿"; playSFX('click'); }
+        if (activity === 'TV') { targetScene = SceneType.TV_ROOM; msg = "Binge watching! 📺"; playSFX('click'); }
+        if (activity === 'PICNIC') { targetScene = SceneType.PICNIC; msg = "Picnic time! 🧺"; playSFX('click'); }
         
-        if (activity === 'RESTAURANT') { targetScene = SceneType.RESTAURANT; msg = "Dinner with Kitty! 🐱"; }
-        if (activity === 'CINEMA') { targetScene = SceneType.CINEMA; msg = "Watching a movie! 🍿"; }
-        if (activity === 'TV') { targetScene = SceneType.TV_ROOM; msg = "Binge watching! 📺"; }
-        if (activity === 'PICNIC') { targetScene = SceneType.PICNIC; msg = "Picnic time! 🧺"; }
+        // Party Logic
+        if (activity === 'PARTY') {
+            targetScene = SceneType.NIGHTCLUB;
+            msg = "PARTY TIME!!! 🎉💃";
+            duration = GAME_CONFIG.DURATION_PARTY;
+            rabbitState = RabbitState.DANCING;
+            outfit = Outfit.PARTY;
+            action = 'PARTY';
+            playSFX('party');
+        }
 
         return {
             ...prev,
             isBusy: true,
-            activeAction: 'SOCIAL',
-            actionTimer: GAME_CONFIG.DURATION_SOCIAL,
-            rabbitState: RabbitState.SOCIAL,
+            activeAction: action,
+            actionTimer: duration,
+            rabbitState: rabbitState,
             currentScene: targetScene,
             currentMessage: msg,
-            love: Math.min(100, prev.love + GAME_CONFIG.GAIN_SOCIAL_LOVE)
+            outfit: outfit,
+            love: activity !== 'PARTY' ? Math.min(100, prev.love + GAME_CONFIG.GAIN_SOCIAL_LOVE) : prev.love // Party Love applied at end
         };
     });
   }, []);
@@ -596,7 +701,8 @@ export const useGameLoop = () => {
     gameState,
     time,
     feed,
-    clean,
+    clean, // Keeping clean for backward compat but logic routes to performHygiene in App if needed
+    performHygiene,
     social,
     work,
     togglePomodoro,

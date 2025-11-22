@@ -1,9 +1,12 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group, Mesh } from 'three';
 import { Text } from '@react-three/drei';
-import { RabbitState, Outfit, Weather, SceneType } from '../types';
+import { RabbitState, Outfit, Weather, SceneType, DailyHygiene } from '../types';
+
+// Global JSX augmentation moved to types.ts or declaration file, 
+// but for this component we ensure we use standard React.
 
 interface VoxelRabbitProps {
   state: RabbitState;
@@ -14,6 +17,7 @@ interface VoxelRabbitProps {
   scene?: SceneType;
   weight: number;
   role?: 'MAIN' | 'WAITER' | 'EXTRA';
+  dailyHygiene?: DailyHygiene;
 }
 
 const Zzz = () => {
@@ -40,6 +44,63 @@ const Zzz = () => {
     </Text>
   );
 };
+
+const Flies = () => {
+    const groupRef = useRef<Group>(null);
+    const flies = useMemo(() => Array(3).fill(0).map(() => ({
+        offset: Math.random() * Math.PI * 2,
+        speed: 2 + Math.random() * 2,
+        height: Math.random() * 0.5
+    })), []);
+
+    useFrame(({ clock }) => {
+        if (groupRef.current) {
+            const t = clock.getElapsedTime();
+            groupRef.current.children.forEach((child, i) => {
+                const fly = flies[i];
+                child.position.x = Math.cos(t * fly.speed + fly.offset) * 1.5;
+                child.position.z = Math.sin(t * fly.speed + fly.offset) * 1.5;
+                child.position.y = 3.5 + Math.sin(t * 5) * 0.2 + fly.height;
+                child.rotation.y = Math.atan2(-child.position.z, -child.position.x);
+            });
+        }
+    });
+
+    return (
+        <group ref={groupRef}>
+            {flies.map((_, i) => (
+                <mesh key={i}>
+                    <sphereGeometry args={[0.08]} />
+                    <meshStandardMaterial color="black" />
+                    <mesh position={[0.05, 0, 0]}><boxGeometry args={[0.05, 0.02, 0.05]} /><meshStandardMaterial color="white" transparent opacity={0.5} /></mesh>
+                    <mesh position={[-0.05, 0, 0]}><boxGeometry args={[0.05, 0.02, 0.05]} /><meshStandardMaterial color="white" transparent opacity={0.5} /></mesh>
+                </mesh>
+            ))}
+        </group>
+    );
+};
+
+const Bubbles = () => {
+    const groupRef = useRef<Group>(null);
+    useFrame(({ clock }) => {
+        const t = clock.getElapsedTime();
+        if(groupRef.current) {
+             groupRef.current.children.forEach((child, i) => {
+                 const offset = i;
+                 child.position.y = Math.sin(t * 2 + offset) * 0.5 + 0.5;
+                 child.scale.setScalar(0.8 + Math.sin(t * 3 + offset) * 0.2);
+             });
+        }
+    });
+    
+    return (
+        <group ref={groupRef} position={[0, 2.5, 1]}>
+             <mesh position={[-0.3, 0, 0]}><sphereGeometry args={[0.15]} /><meshStandardMaterial color="white" transparent opacity={0.6} /></mesh>
+             <mesh position={[0.3, 0.2, 0]}><sphereGeometry args={[0.2]} /><meshStandardMaterial color="white" transparent opacity={0.6} /></mesh>
+             <mesh position={[0, -0.2, 0.2]}><sphereGeometry args={[0.1]} /><meshStandardMaterial color="white" transparent opacity={0.6} /></mesh>
+        </group>
+    );
+}
 
 const Umbrella = () => {
     return (
@@ -73,6 +134,19 @@ const CarrotAccessory = () => (
   </group>
 );
 
+const ToothbrushAccessory = () => (
+    <group position={[0, -1.0, 0]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0.5, 0]}>
+            <boxGeometry args={[0.1, 1.2, 0.1]} />
+            <meshStandardMaterial color="cyan" />
+        </mesh>
+        <mesh position={[0, 1.1, 0.05]}>
+            <boxGeometry args={[0.15, 0.3, 0.1]} />
+            <meshStandardMaterial color="white" />
+        </mesh>
+    </group>
+);
+
 const WaterBottleAccessory = () => (
     <group position={[0, -0.6, 0.2]} rotation={[1.5, 0, 0]}>
         <mesh position={[0, 0.2, 0]}>
@@ -103,6 +177,15 @@ const DumbbellAccessory = () => (
     </group>
 );
 
+const GlowStickAccessory = () => (
+    <group position={[0, -0.5, 0]} rotation={[0, 0, 0]}>
+        <mesh>
+            <cylinderGeometry args={[0.05, 0.05, 0.8]} />
+            <meshStandardMaterial color="#00FF00" emissive="#00FF00" emissiveIntensity={1} />
+        </mesh>
+    </group>
+);
+
 const PopcornBucket = () => (
     <group position={[0.8, 1.5, 1.2]} rotation={[-0.5, 0, -0.5]} scale={[0.6, 0.6, 0.6]}>
          <mesh position={[0, 0, 0]}>
@@ -110,7 +193,6 @@ const PopcornBucket = () => (
             <meshStandardMaterial color="red" />
          </mesh>
          <mesh position={[0, 0, 0.02]}><planeGeometry args={[0.2, 0.4]} /><meshStandardMaterial color="white" /></mesh>
-         {/* Popcorn kernels */}
          <mesh position={[0, 0.5, 0]}>
              <dodecahedronGeometry args={[0.5]} />
              <meshStandardMaterial color="#FFD700" />
@@ -118,7 +200,7 @@ const PopcornBucket = () => (
     </group>
 );
 
-const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunger, weather, scene, weight, role = 'MAIN' }) => {
+const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunger, weather, scene, weight, role = 'MAIN', dailyHygiene }) => {
   const groupRef = useRef<Group>(null);
   const headRef = useRef<Mesh>(null);
   const bodyRef = useRef<Mesh>(null);
@@ -130,11 +212,13 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
   const isSick = hunger < 20 && role === 'MAIN';
   const isPale = hunger < 50 && !isSick && role === 'MAIN';
   
-  // Weight scaling logic
   const widthScale = role === 'MAIN' ? 1 + (Math.max(0, weight - 50) / 100) : 1; 
   
   const getBodyColor = () => {
-      if (role === 'EXTRA') return '#DDD';
+      if (role === 'EXTRA') {
+          // Randomize extra colors based on "randomness" if possible, or just static variations
+          return Math.random() > 0.5 ? '#AAA' : '#DDD'; 
+      }
       if (isSick) return '#E0EEE0'; 
       if (isPale) return '#FFE4E1'; 
       return '#FFFFFF'; 
@@ -147,18 +231,19 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
                           (state === RabbitState.IDLE || state === RabbitState.HAPPY) &&
                           role === 'MAIN';
 
-  // Update isSitting logic: Include SceneType.OFFICE
   const isSitting = scene === SceneType.OFFICE ||
                     state === RabbitState.WORKING || 
                     (state === RabbitState.SOCIAL && (scene === SceneType.RESTAURANT || scene === SceneType.CINEMA || scene === SceneType.TV_ROOM || scene === SceneType.PICNIC));
   
   const hasPopcorn = (scene === SceneType.CINEMA || scene === SceneType.TV_ROOM) && isSitting && role === 'MAIN';
+  
+  // Determine visual dirtiness based on stats OR missing daily tasks
+  const visualDirty = isDirty || (role === 'MAIN' && dailyHygiene && (!dailyHygiene.brushed || !dailyHygiene.washedFace || !dailyHygiene.showered) && new Date().getHours() > 10);
 
   useFrame((stateThree) => {
     const t = stateThree.clock.getElapsedTime() * speedMult;
     if (!groupRef.current) return;
 
-    // Reset basic transforms
     if (headRef.current) {
         headRef.current.rotation.set(0, 0, 0);
         headRef.current.position.y = 3.5;
@@ -168,11 +253,63 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
     if (leftArmRef.current) leftArmRef.current.rotation.set(0,0,0);
     if (rightArmRef.current) rightArmRef.current.rotation.set(0,0,0);
     
+    // Reset scale default every frame
+    if (bodyRef.current) bodyRef.current.scale.set(1 * widthScale, 1, 1);
+    
     let BaseY = 0; 
     groupRef.current.rotation.set(0, 0, 0);
 
+    // --- HYGIENE ANIMATIONS ---
+    if (state === RabbitState.BRUSHING) {
+        if (headRef.current) headRef.current.rotation.y = Math.sin(t * 10) * 0.05;
+        if (rightArmRef.current) {
+            rightArmRef.current.position.z = 0.8;
+            rightArmRef.current.position.y = 2.8;
+            rightArmRef.current.rotation.x = -1.8;
+            rightArmRef.current.rotation.z = -0.5;
+            // Brushing motion
+            rightArmRef.current.position.x = 1 + Math.sin(t * 15) * 0.1;
+        }
+        if (leftArmRef.current) {
+            leftArmRef.current.rotation.z = 0.2;
+        }
+    }
+    
+    else if (state === RabbitState.WASHING_FACE) {
+        if (headRef.current) headRef.current.rotation.x = 0.2;
+        const rub = Math.sin(t * 10) * 0.2;
+        if (rightArmRef.current) {
+            rightArmRef.current.position.z = 0.8;
+            rightArmRef.current.position.y = 2.8 + rub;
+            rightArmRef.current.rotation.x = -2.2;
+            rightArmRef.current.rotation.z = -0.5;
+            rightArmRef.current.position.x = 0.5;
+        }
+        if (leftArmRef.current) {
+            leftArmRef.current.position.z = 0.8;
+            leftArmRef.current.position.y = 2.8 - rub;
+            leftArmRef.current.rotation.x = -2.2;
+            leftArmRef.current.rotation.z = 0.5;
+            leftArmRef.current.position.x = -0.5;
+        }
+    }
+
+    else if (state === RabbitState.SHOWERING) {
+        BaseY = 0.1;
+        if (headRef.current) headRef.current.rotation.x = -0.3; // Look up at water
+        if (leftArmRef.current) {
+            leftArmRef.current.rotation.z = 2.8; // Arms up
+            leftArmRef.current.rotation.x = Math.sin(t * 5) * 0.2;
+        }
+        if (rightArmRef.current) {
+            rightArmRef.current.rotation.z = -2.8; // Arms up
+            rightArmRef.current.rotation.x = Math.cos(t * 5) * 0.2;
+        }
+        groupRef.current.rotation.y = Math.sin(t) * 0.5; // Spin slowly
+    }
+
     // --- WAITER ANIMATION ---
-    if (role === 'WAITER') {
+    else if (role === 'WAITER') {
          BaseY = Math.sin(t * 4) * 0.05;
          if (headRef.current) {
              headRef.current.rotation.x = 0.2; 
@@ -186,11 +323,38 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
             leftArmRef.current.rotation.z = -0.2;
          }
          groupRef.current.position.y = BaseY;
-         return; 
+    }
+
+    // --- DANCING ANIMATION ---
+    else if (state === RabbitState.DANCING) {
+        const beat = t * 12;
+        BaseY = Math.abs(Math.sin(beat)) * 0.8; // High jump
+        
+        // Wiggle
+        groupRef.current.rotation.y = Math.sin(beat / 2) * 0.2; 
+        
+        if (headRef.current) {
+            headRef.current.rotation.z = Math.cos(beat / 2) * 0.1;
+            headRef.current.rotation.x = 0.1 + Math.sin(beat) * 0.1;
+        }
+
+        // Wild arms
+        if (leftArmRef.current) {
+            leftArmRef.current.rotation.z = 2.5 + Math.sin(beat) * 0.5;
+            leftArmRef.current.rotation.x = Math.cos(beat) * 0.5;
+        }
+        if (rightArmRef.current) {
+            rightArmRef.current.rotation.z = -2.5 - Math.sin(beat) * 0.5;
+            rightArmRef.current.rotation.x = Math.sin(beat) * 0.5;
+        }
+
+        // Legs kick
+        if (leftLegRef.current) leftLegRef.current.rotation.x = Math.sin(beat) * 0.5;
+        if (rightLegRef.current) rightLegRef.current.rotation.x = -Math.sin(beat) * 0.5;
     }
 
     // IDLE
-    if (state === RabbitState.IDLE) {
+    else if (state === RabbitState.IDLE) {
        BaseY = Math.sin(t * 2) * 0.1;
        if (headRef.current) {
            headRef.current.rotation.z = Math.sin(t * 1) * 0.05;
@@ -207,21 +371,18 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
     }
 
     // SITTING
-    if (isSitting) {
+    else if (isSitting) {
        BaseY = -0.8; 
        if (leftLegRef.current) leftLegRef.current.rotation.x = -Math.PI / 2;
        if (rightLegRef.current) rightLegRef.current.rotation.x = -Math.PI / 2;
        if (headRef.current) headRef.current.rotation.x = 0.1 + Math.sin(t * 2) * 0.02; 
        
-       // WORK TYPING - Adjusted for Front View
+       // WORK TYPING
        if (state === RabbitState.WORKING && leftArmRef.current && rightArmRef.current) {
-           // Arms reach forward (Z+)
            leftArmRef.current.position.z = 0.6;
            rightArmRef.current.position.z = 0.6;
-           // Rotate slightly inwards
            leftArmRef.current.rotation.y = -0.2;
            rightArmRef.current.rotation.y = 0.2;
-           // Type up and down
            leftArmRef.current.rotation.x = -1.3 + Math.sin(t * 25) * 0.15;
            rightArmRef.current.rotation.x = -1.3 + Math.cos(t * 25) * 0.15;
        }
@@ -245,43 +406,33 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
        }
     } 
 
-    // EXERCISE (SWIM, LIFT, RUN, PILATES)
-    if (state === RabbitState.EXERCISE) {
-        
-        // SWIMMING - Horizontal, Face down, Paddling
+    // EXERCISE
+    else if (state === RabbitState.EXERCISE) {
         if (outfit === Outfit.SPORT_SWIM) {
-            groupRef.current.rotation.x = -Math.PI / 2; // Horizontal
-            BaseY = 0.5 + Math.sin(t * 3) * 0.1; // Float
-            
+            groupRef.current.rotation.x = -Math.PI / 2; 
+            BaseY = 0.5 + Math.sin(t * 3) * 0.1;
             if (leftArmRef.current) {
-                 leftArmRef.current.rotation.x = Math.PI; // Start forward
-                 leftArmRef.current.rotation.z = Math.sin(t * 5) * 0.5; // Stroke out
+                 leftArmRef.current.rotation.x = Math.PI; 
+                 leftArmRef.current.rotation.z = Math.sin(t * 5) * 0.5; 
             }
             if (rightArmRef.current) {
                  rightArmRef.current.rotation.x = Math.PI;
                  rightArmRef.current.rotation.z = -Math.sin(t * 5 + 1) * 0.5;
             }
-            
-            if (leftLegRef.current) leftLegRef.current.rotation.x = Math.cos(t * 10) * 0.3; // Flutter kick
+            if (leftLegRef.current) leftLegRef.current.rotation.x = Math.cos(t * 10) * 0.3;
             if (rightLegRef.current) rightLegRef.current.rotation.x = -Math.cos(t * 10) * 0.3;
-            
-            if (headRef.current) headRef.current.rotation.x = -0.8; // Look forward
+            if (headRef.current) headRef.current.rotation.x = -0.8; 
         }
-        
-        // WEIGHTLIFTING - Standing, Curl
         else if (outfit === Outfit.SPORT_GYM) {
             BaseY = 0;
             if (rightArmRef.current) {
-                // Curl logic
-                const lift = (Math.sin(t * 3) + 1) / 2; // 0 to 1
+                const lift = (Math.sin(t * 3) + 1) / 2; 
                 rightArmRef.current.rotation.z = -0.2; 
-                rightArmRef.current.rotation.x = -lift * 2.0; // Lift up
+                rightArmRef.current.rotation.x = -lift * 2.0; 
             }
-            if (leftArmRef.current) leftArmRef.current.rotation.z = 0.3; // Balance
-            if (headRef.current) headRef.current.rotation.z = -0.1; // Strain
+            if (leftArmRef.current) leftArmRef.current.rotation.z = 0.3; 
+            if (headRef.current) headRef.current.rotation.z = -0.1; 
         }
-        
-        // RUNNING - Fast arms/legs
         else if (outfit === Outfit.SPORT_RUN) {
             BaseY = Math.abs(Math.sin(t * 15)) * 0.3;
             if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(t * 15);
@@ -290,21 +441,13 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
             if (rightLegRef.current) rightLegRef.current.rotation.x = Math.sin(t * 15);
             if (headRef.current) headRef.current.rotation.x = 0.1;
         }
-
-        // PILATES - On Back, Leg Lifts
         else if (outfit === Outfit.SPORT_PILATES) {
-             groupRef.current.rotation.x = -Math.PI / 2; // Lying on back
-             BaseY = 0.2; // On Mat
-             
-             // Head looks up/forward
+             groupRef.current.rotation.x = -Math.PI / 2; 
+             BaseY = 0.2; 
              if (headRef.current) headRef.current.rotation.x = 0.8; 
-             
-             // Leg lifts
-             const legLift = (Math.sin(t * 2) + 1) / 2 * 1.2; // 0 to 1.2 rads
+             const legLift = (Math.sin(t * 2) + 1) / 2 * 1.2; 
              if (leftLegRef.current) leftLegRef.current.rotation.x = legLift;
              if (rightLegRef.current) rightLegRef.current.rotation.x = legLift;
-             
-             // Arms by side on floor
              if (leftArmRef.current) {
                  leftArmRef.current.rotation.z = 0.3;
                  leftArmRef.current.position.z = -0.2;
@@ -315,13 +458,12 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
              }
         }
         else {
-             // Fallback
              BaseY = Math.abs(Math.sin(t * 15)) * 0.5;
         }
     }
 
     // HAPPY
-    if (state === RabbitState.HAPPY) {
+    else if (state === RabbitState.HAPPY) {
         BaseY = Math.abs(Math.sin(t * 10)) * 2;
         groupRef.current.rotation.y = t * 8; 
         if (leftArmRef.current) leftArmRef.current.rotation.z = 2.5;
@@ -329,35 +471,32 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
     }
 
     // EATING / DRINKING
-    if (state === RabbitState.EATING || state === RabbitState.DRINKING) {
+    else if (state === RabbitState.EATING || state === RabbitState.DRINKING) {
         if (headRef.current) headRef.current.rotation.x = -0.2; 
         if (rightArmRef.current) {
              rightArmRef.current.rotation.x = -2.2 + Math.sin(t * 15) * 0.2;
              rightArmRef.current.rotation.z = -0.3;
              rightArmRef.current.rotation.y = -0.5;
-             // Reset Z position to ensure arm is attached to body correctly even if eating
              rightArmRef.current.position.z = 0.2; 
         }
     }
 
-    // CLEANING
-    if (state === RabbitState.CLEANING) {
+    // CLEANING (Legacy)
+    else if (state === RabbitState.CLEANING) {
         groupRef.current.rotation.y = Math.sin(t * 20) * 0.2;
         if (headRef.current) headRef.current.rotation.z = Math.sin(t * 20) * 0.1;
     }
 
     // SLEEPING
-    if (state === RabbitState.SLEEPING) {
+    else if (state === RabbitState.SLEEPING) {
         groupRef.current.rotation.x = -Math.PI / 2; 
         groupRef.current.rotation.z = Math.PI / 2;
         BaseY = 0; 
         if (bodyRef.current) bodyRef.current.scale.set(1.05 * widthScale, 1, 1);
-    } else {
-        if (bodyRef.current) bodyRef.current.scale.set(1 * widthScale, 1, 1);
-    }
+    } 
     
     // WAKING
-    if (state === RabbitState.WAKING) {
+    else if (state === RabbitState.WAKING) {
         BaseY = Math.abs(Math.sin(t * 10)) * 0.3;
         if (headRef.current) {
             headRef.current.rotation.x = -0.2;
@@ -366,18 +505,18 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
     }
 
     // DEAD
-    if (state === RabbitState.DEAD) {
+    else if (state === RabbitState.DEAD) {
         groupRef.current.rotation.z = Math.PI / 2;
         BaseY = -1.5;
     }
 
-    // Apply Height
-    if (groupRef.current) groupRef.current.position.y = BaseY;
+    if (groupRef.current && state !== RabbitState.SHOWERING && state !== RabbitState.DANCING) groupRef.current.position.y = BaseY;
+    else if (groupRef.current && (state === RabbitState.SHOWERING || state === RabbitState.DANCING)) groupRef.current.position.y = BaseY;
   });
 
   const getColors = () => {
       if (role === 'WAITER') return { shirt: '#222', pants: '#222', tie: 'red', acc: 'none' };
-      if (role === 'EXTRA') return { shirt: '#888', pants: '#666' }; 
+      if (role === 'EXTRA') return { shirt: Math.random() > 0.5 ? '#888' : '#999', pants: '#666' }; // Fallback, but EXTRA should override in props
 
       switch (outfit) {
           case Outfit.WORK: return { shirt: '#FFFFFF', tie: 'red', acc: 'glasses', pants: '#333' };
@@ -387,6 +526,7 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
           case Outfit.SPORT_GYM: return { shirt: '#808080', pants: '#111', acc: 'sweatband' };
           case Outfit.SPORT_PILATES: return { shirt: '#FFB7C5', pants: '#FF69B4', acc: 'none' };
           case Outfit.PAJAMA: return { shirt: '#4B0082', star: true, pants: '#4B0082' };
+          case Outfit.PARTY: return { shirt: '#FF00FF', pants: '#00FFFF', acc: 'shades', necklace: 'glow' };
           default: return { shirt: '#FFB3D9', pants: '#FFFFFF' };
       }
   };
@@ -400,19 +540,39 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
       {holdingUmbrella && <Umbrella />}
       {hasPopcorn && <PopcornBucket />}
 
+      {/* BUBBLES EFFECT */}
+      {(state === RabbitState.BRUSHING || state === RabbitState.WASHING_FACE || state === RabbitState.SHOWERING) && <Bubbles />}
+      
+      {/* FLIES AND DIRT */}
+      {visualDirty && role === 'MAIN' && (
+          <group>
+              <mesh position={[0.8, 2, 1.1]}>
+                  <circleGeometry args={[0.3]} />
+                  <meshStandardMaterial color="#5D4037" opacity={0.8} transparent />
+              </mesh>
+              <mesh position={[-0.5, 1.5, 1.1]}>
+                  <circleGeometry args={[0.2]} />
+                  <meshStandardMaterial color="#5D4037" opacity={0.8} transparent />
+              </mesh>
+               <mesh position={[0, 1, 0.6]}>
+                  <circleGeometry args={[0.4]} />
+                  <meshStandardMaterial color="#5D4037" opacity={0.6} transparent />
+              </mesh>
+              <Flies />
+          </group>
+      )}
+      
+      {/* CLEAN SPARKLE EFFECT */}
+      {!visualDirty && dailyHygiene && dailyHygiene.brushed && dailyHygiene.washedFace && dailyHygiene.showered && role === 'MAIN' && (
+           <group>
+               {/* Simple floating sparkles can be added here or via particle system */}
+           </group>
+      )}
+
       {state === RabbitState.SLEEPING && (
          <group position={[3, 4.5, 0]} rotation={[Math.PI/2, -Math.PI/2, 0]}>
             <Zzz />
          </group>
-      )}
-
-      {isDirty && role === 'MAIN' && (
-          <group>
-              <mesh position={[0.8, 2, 1.1]}>
-                  <circleGeometry args={[0.3]} />
-                  <meshStandardMaterial color="#8B4513" opacity={0.6} transparent />
-              </mesh>
-          </group>
       )}
 
       {state === RabbitState.CLEANING && (
@@ -422,7 +582,7 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
           </mesh>
       )}
 
-      {state === RabbitState.SOCIAL && role === 'MAIN' && (
+      {state === RabbitState.SOCIAL && role === 'MAIN' && scene !== SceneType.NIGHTCLUB && (
           <mesh position={[0, 5, 0]}>
                <octahedronGeometry args={[0.5]} />
                <meshStandardMaterial color="#FF0000" />
@@ -434,11 +594,18 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
         <boxGeometry args={[2.5, 2.2, 2.2]} />
         <meshStandardMaterial color={bodyColor} />
         
+        {/* FACE EXPRESSION */}
         {state === RabbitState.DEAD ? (
              <>
                 <mesh position={[-0.6, 0, 1.11]}><Text position={[0,0,0]} fontSize={0.5} color="black">X</Text></mesh>
                 <mesh position={[0.6, 0, 1.11]}><Text position={[0,0,0]} fontSize={0.5} color="black">X</Text></mesh>
              </>
+        ) : visualDirty ? (
+            <>
+                <mesh position={[-0.6, 0, 1.11]}><boxGeometry args={[0.3, 0.3, 0.1]} /><meshStandardMaterial color="black" /></mesh>
+                <mesh position={[0.6, 0, 1.11]}><boxGeometry args={[0.3, 0.3, 0.1]} /><meshStandardMaterial color="black" /></mesh>
+                <mesh position={[0, -0.6, 1.11]} rotation={[0,0,0]}><torusGeometry args={[0.2, 0.05, 8, 10, Math.PI]} /><meshStandardMaterial color="black" /></mesh>
+            </>
         ) : (
             <>
                 <mesh position={[-0.6, 0, 1.11]}><boxGeometry args={[0.3, 0.3, 0.1]} /><meshStandardMaterial color="black" /></mesh>
@@ -462,6 +629,15 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
                 <mesh position={[0.6, 0, 0]}><boxGeometry args={[0.6, 0.4, 0.1]} /><meshStandardMaterial color="#333" wireframe /></mesh>
             </group>
         )}
+        {style.acc === 'shades' && (
+            <group position={[0, 0, 1.15]}>
+                 {/* Shutter Shades */}
+                 <mesh position={[0, 0, 0]}><boxGeometry args={[1.8, 0.6, 0.2]} /><meshStandardMaterial color="#00FF00" emissive="#00FF00" emissiveIntensity={0.5} /></mesh>
+                 <mesh position={[0, 0, 0.11]}><boxGeometry args={[1.6, 0.05, 0.05]} /><meshStandardMaterial color="black" /></mesh>
+                 <mesh position={[0, 0.2, 0.11]}><boxGeometry args={[1.6, 0.05, 0.05]} /><meshStandardMaterial color="black" /></mesh>
+                 <mesh position={[0, -0.2, 0.11]}><boxGeometry args={[1.6, 0.05, 0.05]} /><meshStandardMaterial color="black" /></mesh>
+            </group>
+        )}
         {style.acc === 'goggles' && (
             <mesh position={[0, 0, 1.15]}><boxGeometry args={[2, 0.6, 0.2]} /><meshStandardMaterial color="cyan" transparent opacity={0.6} /></mesh>
         )}
@@ -469,12 +645,11 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
              <mesh position={[0, 1.2, 0]}><cylinderGeometry args={[1.4, 1.4, 0.5]} /><meshStandardMaterial color="blue" /></mesh>
         )}
         {style.acc === 'headband' && (
-             <mesh position={[0, 0.8, 0]}><torusGeometry args={[1.3, 0.1, 8, 20]} rotation={[Math.PI/2, 0, 0]} /><meshStandardMaterial color="red" /></mesh>
+             <mesh position={[0, 0.8, 0]} rotation={[Math.PI/2, 0, 0]}><torusGeometry args={[1.3, 0.1, 8, 20]} /><meshStandardMaterial color="red" /></mesh>
         )}
         {style.acc === 'sweatband' && (
-             <mesh position={[0, 0.8, 0]}><torusGeometry args={[1.3, 0.1, 8, 20]} rotation={[Math.PI/2, 0, 0]} /><meshStandardMaterial color="white" /></mesh>
+             <mesh position={[0, 0.8, 0]} rotation={[Math.PI/2, 0, 0]}><torusGeometry args={[1.3, 0.1, 8, 20]} /><meshStandardMaterial color="white" /></mesh>
         )}
-        {/* Swim Cap */}
         {outfit === Outfit.SPORT_SWIM && (
              <mesh position={[0, 0.2, 0]}><boxGeometry args={[2.6, 2.3, 2.3]} /><meshStandardMaterial color="#000080" /></mesh>
         )}
@@ -496,10 +671,16 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
 
       {/* BODY */}
       <mesh ref={bodyRef} position={[0, 1.5, 0]} castShadow>
-        <boxGeometry args={[1.5, 1.8, 1]} />
-        <meshStandardMaterial color={style.shirt} />
-        {/* Star or Buttons */}
-        {(style.star || role === 'WAITER') && (
+        {state === RabbitState.SHOWERING ? (
+             // Naked body when showering
+             <boxGeometry args={[1.5, 1.8, 1]} /> 
+        ) : (
+             <boxGeometry args={[1.5, 1.8, 1]} />
+        )}
+        
+        <meshStandardMaterial color={state === RabbitState.SHOWERING ? bodyColor : style.shirt} />
+        
+        {(style.star || role === 'WAITER') && state !== RabbitState.SHOWERING && (
              <mesh position={[0, 0, 0.51]}>
                  {role === 'WAITER' 
                     ? <boxGeometry args={[0.3, 0.2, 0.1]} /> 
@@ -508,18 +689,18 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
                  <meshStandardMaterial color={role === 'WAITER' ? 'red' : 'yellow'} />
              </mesh>
         )}
-        {style.tie && <mesh position={[0, 0.2, 0.51]}><boxGeometry args={[0.2, 0.8, 0.05]} /><meshStandardMaterial color="red" /></mesh>}
+        {style.tie && state !== RabbitState.SHOWERING && <mesh position={[0, 0.2, 0.51]}><boxGeometry args={[0.2, 0.8, 0.05]} /><meshStandardMaterial color="red" /></mesh>}
       </mesh>
 
       {/* ARMS */}
       <mesh ref={leftArmRef} position={[-1, 2, 0.2]}>
         <boxGeometry args={[0.4, 1, 0.4]} />
         <meshStandardMaterial color={bodyColor} />
+        {style.necklace === 'glow' && <GlowStickAccessory />}
       </mesh>
       <mesh ref={rightArmRef} position={[1, 2, 0.2]}>
         <boxGeometry args={[0.4, 1, 0.4]} />
         <meshStandardMaterial color={bodyColor} />
-        {/* Napkin for waiter */}
         {role === 'WAITER' && (
             <mesh position={[0, -0.4, 0]}>
                 <boxGeometry args={[0.5, 0.6, 0.1]} />
@@ -527,21 +708,23 @@ const VoxelRabbit: React.FC<VoxelRabbitProps> = ({ state, outfit, isDirty, hunge
             </mesh>
         )}
 
-        {/* HOLDING ITEMS - ATTACHED TO HAND */}
+        {/* HOLDING ITEMS */}
         {state === RabbitState.EATING && role === 'MAIN' && <CarrotAccessory />}
         {state === RabbitState.DRINKING && role === 'MAIN' && <WaterBottleAccessory />}
         {outfit === Outfit.SPORT_GYM && state === RabbitState.EXERCISE && <DumbbellAccessory />}
+        {state === RabbitState.BRUSHING && <ToothbrushAccessory />}
+        {style.necklace === 'glow' && <GlowStickAccessory />}
       </mesh>
 
       {/* LEGS */}
       <group>
         <mesh ref={leftLegRef} position={[-0.5, 0.3, 0]}>
              <boxGeometry args={[0.4, 0.6, 1]} />
-             <meshStandardMaterial color={style.pants} />
+             <meshStandardMaterial color={state === RabbitState.SHOWERING ? bodyColor : style.pants} />
         </mesh>
         <mesh ref={rightLegRef} position={[0.5, 0.3, 0]}>
              <boxGeometry args={[0.4, 0.6, 1]} />
-             <meshStandardMaterial color={style.pants} />
+             <meshStandardMaterial color={state === RabbitState.SHOWERING ? bodyColor : style.pants} />
         </mesh>
       </group>
     </group>

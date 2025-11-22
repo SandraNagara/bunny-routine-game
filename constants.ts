@@ -13,11 +13,15 @@ export const GAME_CONFIG = {
   // Timers (seconds)
   DURATION_TRAIN: 10,
   DURATION_SLEEP: 15, // Nap duration
-  DURATION_LONG_SLEEP: 21600, // 6 hours in seconds (simulated or real) - used for game logic
-  DURATION_CLEAN: 3,
+  DURATION_LONG_SLEEP: 21600, // 6 hours in seconds
+  DURATION_CLEAN: 3, // Generic
+  DURATION_BRUSH: 5,
+  DURATION_WASH_FACE: 4,
+  DURATION_SHOWER: 7,
   DURATION_FEED: 2,
   DURATION_DRINK: 2,
   DURATION_SOCIAL: 10,
+  DURATION_PARTY: 15, // New
   
   // Work Session Configuration
   WORK_SESSION_DURATION: 360, 
@@ -59,6 +63,11 @@ export const GAME_CONFIG = {
   GAIN_SOCIAL_LOVE: 25, 
   COST_SOCIAL_HUNGER: 5,
   
+  GAIN_PARTY_LOVE: 40, // High love gain
+  COST_PARTY_HUNGER: 15, // High energy cost
+  COST_PARTY_THIRST: 15,
+  COST_PARTY_HEALTH: 5, // Dancing is tiring
+  
   // Health Logic
   DAMAGE_STARVING_DIRTY: 10, 
   REGEN_HEALTH: 5,           
@@ -66,7 +75,7 @@ export const GAME_CONFIG = {
   // Thresholds
   THRESHOLD_HUNGRY: 20,
   THRESHOLD_THIRSTY: 20,
-  THRESHOLD_DIRTY: 20,
+  THRESHOLD_DIRTY: 40, // Increased threshold for visible dirtiness
   THRESHOLD_LONELY: 20,
   THRESHOLD_FULL: 95,
   THRESHOLD_HAPPY_HEALTH: 50, 
